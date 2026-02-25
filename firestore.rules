@@ -1,0 +1,79 @@
+// Firestore Security Rules
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function userTenant() {
+      return userDoc().data.tenantId;
+    }
+
+    function hasRole(role) {
+      return userDoc().data.role == role;
+    }
+
+    function inTenant(resourceTenantId) {
+      return signedIn() && userTenant() == resourceTenantId;
+    }
+
+    function canReadTenant(resourceTenantId) { return inTenant(resourceTenantId); }
+
+    function canWriteTenant(resourceTenantId) {
+      return inTenant(resourceTenantId) && (hasRole("ADMIN") || hasRole("PLANER") || hasRole("INSTALLER") || hasRole("SALES"));
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && (uid == request.auth.uid || (hasRole("ADMIN") && userDoc().data.tenantId == resource.data.tenantId));
+      allow create: if signedIn() && uid == request.auth.uid;
+      allow update: if signedIn() && (
+        uid == request.auth.uid ||
+        (hasRole("ADMIN") && userDoc().data.tenantId == resource.data.tenantId)
+      );
+      allow delete: if hasRole("ADMIN");
+    }
+
+    match /tenants/{tenantId} {
+      allow read: if inTenant(tenantId);
+      allow write: if hasRole("ADMIN") && inTenant(tenantId);
+    }
+
+    match /projects/{projectId} {
+      allow read: if canReadTenant(resource.data.tenantId);
+      allow create: if signedIn() && request.resource.data.tenantId == userTenant();
+      allow update, delete: if canWriteTenant(resource.data.tenantId);
+    }
+
+    match /documents/{docId} {
+      allow read: if canReadTenant(resource.data.tenantId);
+      allow create, update, delete: if canWriteTenant(resource.data.tenantId);
+    }
+
+    match /documentVersions/{versionId} {
+      allow read: if canReadTenant(resource.data.tenantId);
+      allow create: if canWriteTenant(request.resource.data.tenantId);
+      allow update, delete: if hasRole("ADMIN");
+    }
+
+    match /signatureRequests/{reqId} {
+      allow read: if canReadTenant(resource.data.tenantId);
+      allow create, update: if canWriteTenant(resource.data.tenantId);
+      allow delete: if hasRole("ADMIN");
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if canReadTenant(resource.data.tenantId) && hasRole("ADMIN");
+      allow create: if false; // server writes via Admin SDK (bypasses rules)
+      allow update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

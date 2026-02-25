@@ -1,0 +1,18 @@
+# Firebase App Hosting configuration
+# Docs: https://firebase.google.com/docs/app-hosting/configure
+
+runConfig:
+  minInstances: 0
+  maxInstances: 20
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
+
+env:
+  - variable: NEXT_PUBLIC_FIREBASE_REGION
+    value: europe-west1
+    availability: [BUILD, RUNTIME]
+
+  - variable: APP_BASE_URL
+    value: https://REPLACE_WITH_YOUR_HOSTED_DOMAIN
+    availability: [BUILD, RUNTIME]

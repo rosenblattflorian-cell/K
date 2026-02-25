@@ -1,0 +1,31 @@
+{
+  "name": "solar-mitte-energy-os",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "functions"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev:web": "npm -w apps/web run dev",
+    "dev:emu": "firebase emulators:start --only auth,firestore,functions,storage",
+    "dev": "node ./scripts/dev.mjs",
+    "lint": "npm -w apps/web run lint && npm -w functions run lint",
+    "format": "prettier -w .",
+    "test": "npm -w apps/web run test && npm -w functions run test",
+    "test:e2e": "npm -w apps/web run test:e2e",
+    "build": "npm -w apps/web run build && npm -w functions run build",
+    "seed:templates": "tsx ./scripts/seed-templates.ts",
+    "deploy:backend": "firebase deploy --only functions,firestore:rules,firestore:indexes,storage",
+    "deploy:web": "firebase deploy --only apphosting",
+    "deploy": "firebase deploy"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0",
+    "prettier": "^3.3.3",
+    "tsx": "^4.19.2",
+    "dotenv": "^16.4.5"
+  }
+}
